@@ -30,7 +30,7 @@ const btnSaveConn = document.getElementById('btn-save-conn') as HTMLButtonElemen
 
 // DOM: Right Main Console
 const clientBadge = document.getElementById('client-badge') as HTMLSpanElement;
-const btnOpenTab = document.getElementById('btn-open-tab') as HTMLButtonElement;
+const btnOpenTab = document.getElementById('btn-open-tab') as HTMLButtonElement | null;
 const btnExportJson = document.getElementById('btn-export-json') as HTMLButtonElement;
 const tabButtons = document.querySelectorAll<HTMLButtonElement>('.tab-btn');
 const inputFilterLogs = document.getElementById('input-filter-logs') as HTMLInputElement;
@@ -164,14 +164,16 @@ function setupEventListeners(): void {
     renderStream();
   });
 
-  // Open Full Tab
-  btnOpenTab.addEventListener('click', () => {
-    if (typeof chrome !== 'undefined' && chrome.tabs) {
-      chrome.tabs.create({ url: chrome.runtime.getURL('src/popup/popup.html') });
-    } else {
-      window.open(window.location.href, '_blank');
-    }
-  });
+  // Open Full Tab (if button exists in DOM)
+  if (btnOpenTab) {
+    btnOpenTab.addEventListener('click', () => {
+      if (typeof chrome !== 'undefined' && chrome.tabs) {
+        chrome.tabs.create({ url: chrome.runtime.getURL('src/popup/popup.html') });
+      } else {
+        window.open(window.location.href, '_blank');
+      }
+    });
+  }
 
   // Export JSON
   btnExportJson.addEventListener('click', exportLogsJson);
