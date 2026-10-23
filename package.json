@@ -1,0 +1,30 @@
+{
+  "name": "echoscope",
+  "version": "1.0.0",
+  "description": "Real-time WebSocket & Laravel Reverb Broadcast Inspector for Developers",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/build.js --watch",
+    "build": "tsc --noEmit && node scripts/build.js",
+    "generate-icons": "node scripts/generate-icons.js",
+    "mock-server": "node mock-server.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "laravel-reverb",
+    "websocket",
+    "pusher",
+    "developer-tools",
+    "realtime",
+    "broadcast-testing"
+  ],
+  "author": "Sakhawat",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chrome": "^0.0.280",
+    "@types/node": "^26.6.5",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11",
+    "ws": "^8.17.0"
+  }
+}
