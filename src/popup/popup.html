@@ -3,163 +3,168 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EchoScope - WebSocket & Reverb Inspector</title>
+  <title>EchoScope - Broadcast Console Stream</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="app-container">
-    <!-- Header -->
-    <header class="header">
-      <div class="brand">
-        <div class="logo-radar">
-          <span class="radar-ping"></span>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path>
-            <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path>
-            <circle cx="12" cy="12" r="2"></circle>
-            <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path>
-            <path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"></path>
-          </svg>
+  <div class="console-layout">
+    
+    <!-- LEFT SIDEBAR: Channel Config & Active Channels -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="logo-radar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path>
+              <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path>
+              <circle cx="12" cy="12" r="2"></circle>
+              <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path>
+              <path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"></path>
+            </svg>
+          </div>
+          <h2>Channel Config</h2>
         </div>
-        <div>
-          <h1 class="title">EchoScope</h1>
-          <span class="subtitle">Laravel Reverb & WebSocket Inspector</span>
-        </div>
-      </div>
-
-      <div class="header-actions">
-        <button id="btn-export" class="icon-btn" title="Export Captured Events as JSON">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
-        </button>
-        <button id="btn-clear" class="icon-btn" title="Clear Event Log">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-          </svg>
-        </button>
-        <button id="btn-toggle-config" class="icon-btn" title="Toggle Connection Settings">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="btn-toggle-config" class="icon-sm" title="Reverb Connection Settings">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
         </button>
       </div>
-    </header>
 
-    <!-- Connection Banner & Status -->
-    <div class="connection-bar">
-      <div class="status-badge" id="status-badge">
-        <span class="status-dot disconnected" id="status-dot"></span>
-        <span class="status-label" id="status-label">Disconnected</span>
-      </div>
-      <button id="btn-connect" class="btn-connect">Connect</button>
-    </div>
-
-    <!-- Collapsible Connection Settings -->
-    <div id="config-drawer" class="config-drawer">
-      <div class="config-grid">
-        <div class="field-group">
-          <label for="cfg-protocol">Protocol</label>
-          <select id="cfg-protocol" class="input-sm">
-            <option value="reverb">Laravel Reverb</option>
-            <option value="pusher">Pusher Channels</option>
-            <option value="raw">Raw WebSocket</option>
-          </select>
+      <!-- Settings Dropdown Drawer (Reverb Host/Port/Key) -->
+      <div id="config-drawer" class="config-drawer">
+        <div class="drawer-title">Reverb Connection Details</div>
+        <div class="form-row">
+          <label>Host & Port</label>
+          <div class="row-inputs">
+            <input type="text" id="cfg-host" value="127.0.0.1" placeholder="127.0.0.1">
+            <input type="text" id="cfg-port" value="8080" placeholder="8080" style="width: 60px;">
+          </div>
         </div>
-
-        <div class="field-group">
-          <label for="cfg-scheme">Scheme</label>
-          <select id="cfg-scheme" class="input-sm">
-            <option value="ws">ws:// (Local / Insecure)</option>
-            <option value="wss">wss:// (Secure / SSL)</option>
-          </select>
+        <div class="form-row">
+          <label>Scheme & Protocol</label>
+          <div class="row-inputs">
+            <select id="cfg-scheme">
+              <option value="ws">ws://</option>
+              <option value="wss">wss://</option>
+            </select>
+            <select id="cfg-protocol">
+              <option value="reverb">Laravel Reverb</option>
+              <option value="pusher">Pusher</option>
+            </select>
+          </div>
         </div>
-
-        <div class="field-group">
-          <label for="cfg-host">Host</label>
-          <input type="text" id="cfg-host" class="input-sm" value="localhost" placeholder="localhost">
+        <div class="form-row">
+          <label>App Key</label>
+          <input type="text" id="cfg-key" value="1dvx2vkq68nbt7ugr5q8" placeholder="App Key">
         </div>
-
-        <div class="field-group">
-          <label for="cfg-port">Port</label>
-          <input type="text" id="cfg-port" class="input-sm" value="8080" placeholder="8080">
+        <div class="form-row">
+          <label>Auth URL (/broadcasting/auth)</label>
+          <input type="text" id="cfg-auth" value="http://robertcravatt.test/broadcasting/auth" placeholder="http://robertcravatt.test/broadcasting/auth">
         </div>
-
-        <div class="field-group full-width">
-          <label for="cfg-key">App Key</label>
-          <input type="text" id="cfg-key" class="input-sm" value="reverb-key" placeholder="Laravel Reverb App Key">
+        <div class="form-row">
+          <label>Bearer Token (Optional)</label>
+          <input type="text" id="cfg-token" placeholder="Optional JWT / Sanctum token">
         </div>
+        <button id="btn-save-conn" class="btn-save-conn">Save & Reconnect</button>
+      </div>
 
-        <div class="field-group full-width">
-          <label for="cfg-auth">Private Channel Auth Endpoint</label>
-          <input type="text" id="cfg-auth" class="input-sm" value="http://localhost:8000/broadcasting/auth" placeholder="http://localhost:8000/broadcasting/auth">
+      <!-- Subscription Form -->
+      <div class="form-group">
+        <label for="select-channel-type">CHANNEL TYPE</label>
+        <select id="select-channel-type" class="form-control">
+          <option value="public">Public</option>
+          <option value="private" selected>Private</option>
+          <option value="presence">Presence</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="input-channel-name">CHANNEL NAME</label>
+        <input type="text" id="input-channel-name" class="form-control" placeholder="e.g. orders, user.1, chat.5">
+      </div>
+
+      <div class="form-group">
+        <label for="input-event-name">EVENT NAME (OPTIONAL)</label>
+        <input type="text" id="input-event-name" class="form-control" placeholder="e.g. .OrderCreated or MessageSent">
+      </div>
+
+      <button id="btn-subscribe" class="btn-action btn-subscribe">
+        + Subscribe Channel
+      </button>
+
+      <!-- Active Channels List -->
+      <div class="active-channels-section">
+        <h3 class="section-title">Active Channels</h3>
+        <div id="active-channels-list" class="active-channels-list">
+          <div class="empty-channels">No active channels subscribed.</div>
         </div>
+      </div>
 
-        <div class="field-group full-width">
-          <label for="cfg-token">Bearer Token (Optional)</label>
-          <input type="text" id="cfg-token" class="input-sm" placeholder="Optional Bearer token for Sanctum / JWT">
+      <!-- Bottom Utility Buttons -->
+      <div class="sidebar-utilities">
+        <button id="btn-clear-logs" class="btn-util btn-clear-logs">
+          Clear Screen UI Logs
+        </button>
+        <button id="btn-clear-cache" class="btn-util btn-clear-cache">
+          Clear Local Storage Cache
+        </button>
+      </div>
+    </aside>
+
+    <!-- RIGHT MAIN: Broadcast Console Stream -->
+    <main class="console-main">
+      <!-- Console Header -->
+      <header class="console-header">
+        <div class="console-title-group">
+          <h1>Broadcast Console Stream</h1>
+          <span class="user-id-badge" id="client-badge">Reverb Client</span>
+        </div>
+        <div class="header-right-tools">
+          <button id="btn-open-tab" class="tool-btn" title="Open in Full Browser Tab">
+            ↗ Fullscreen
+          </button>
+          <button id="btn-export-json" class="tool-btn" title="Export Captured Events as JSON">
+            Export JSON
+          </button>
+        </div>
+      </header>
+
+      <!-- Tabs Bar & Filter -->
+      <div class="tabs-toolbar">
+        <div class="tabs-group">
+          <button class="tab-btn active" data-tab="all">All Logs <span class="tab-count" id="count-all">0</span></button>
+          <button class="tab-btn" data-tab="events">Events <span class="tab-count" id="count-events">0</span></button>
+          <button class="tab-btn" data-tab="errors">Errors <span class="tab-count" id="count-errors">0</span></button>
+          <button class="tab-btn" data-tab="system">System Info <span class="tab-count" id="count-system">0</span></button>
+        </div>
+        <div class="filter-box">
+          <input type="text" id="input-filter-logs" placeholder="Filter logs...">
         </div>
       </div>
-    </div>
 
-    <!-- Channel Manager -->
-    <div class="channel-section">
-      <div class="channel-input-group">
-        <input type="text" id="input-channel" class="channel-input" placeholder="Channel (e.g. orders, private-user.1, presence-chat)">
-        <button id="btn-subscribe" class="btn-sub">+ Subscribe</button>
+      <!-- Console Stream Output -->
+      <div id="console-stream" class="console-stream">
+        <div class="stream-empty" id="stream-empty">
+          <div class="pulse-icon">📡</div>
+          <p>Waiting for connection & broadcast events...</p>
+        </div>
       </div>
 
-      <!-- Active Channel Chips -->
-      <div id="channels-container" class="channels-chips">
-        <span class="no-channels-text">No active channels. Subscribe to start receiving broadcasts.</span>
-      </div>
-    </div>
+      <!-- Console Footer -->
+      <footer class="console-footer">
+        <div class="service-status">
+          <span class="status-indicator-dot connecting" id="status-dot"></span>
+          <span class="status-service-text" id="status-text">Echo Service Connecting...</span>
+        </div>
+        <div class="logs-count-summary" id="logs-summary">0 logs shown</div>
+      </footer>
+    </main>
 
-    <!-- Stream Controls & Search -->
-    <div class="stream-toolbar">
-      <div class="search-box">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input type="text" id="filter-input" placeholder="Filter by event name or payload...">
-      </div>
-      <div class="toolbar-stats">
-        <span id="event-counter">0 events</span>
-        <label class="autoscroll-toggle" title="Auto-scroll on new event">
-          <input type="checkbox" id="toggle-autoscroll" checked>
-          <span>Auto</span>
-        </label>
-      </div>
-    </div>
-
-    <!-- Live Event Feed -->
-    <div id="event-feed" class="event-feed">
-      <div class="empty-state" id="empty-state">
-        <div class="empty-icon">📡</div>
-        <h3>No broadcast events yet</h3>
-        <p>Connect to Reverb and trigger an event from your Laravel app or mock server to see live broadcasts here.</p>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <div class="whisper-trigger-bar">
-        <input type="text" id="whisper-event" placeholder="client-event (e.g. typing)" class="whisper-input">
-        <button id="btn-send-whisper" class="btn-whisper">Send Whisper</button>
-      </div>
-      <div class="footer-bottom">
-        <span class="version">EchoScope v1.0.0</span>
-        <a href="https://github.com/sajusun/EchoScope" target="_blank" class="github-link">GitHub ⭐</a>
-      </div>
-    </footer>
   </div>
 
-  <div id="toast" class="toast">Event copied!</div>
+  <div id="toast" class="toast">Copied to clipboard!</div>
 
   <script type="module" src="popup.ts"></script>
 </body>

@@ -1,7 +1,7 @@
-import { BroadcastEvent, ChannelSubscription, ConnectionStatus, ReverbConfig } from '../types';
+import { ChannelSubscription, ChannelType, ConnectionStatus, ConsoleLogItem, ReverbConfig } from '../types';
 import { AuthService } from './auth-service';
 
-export type EventCallback = (event: BroadcastEvent) => void;
+export type LogCallback = (item: ConsoleLogItem) => void;
 export type StatusCallback = (status: ConnectionStatus, message?: string) => void;
 export type ChannelCallback = (channels: ChannelSubscription[]) => void;
 
@@ -9,8 +9,8 @@ export class ReverbClient {
   private ws: WebSocket | null = null;
   private config: ReverbConfig;
   private socketId: string | null = null;
-  private channels: Map<string, ChannelSubscription> = new Map();
-  private onEvent: EventCallback;
+  private channels: Map<string, ChannelSubscription> = new Map(); // key is wireName
+  private onLog: LogCallback;
   private onStatus: StatusCallback;
   private onChannelsChange: ChannelCallback;
   private pingInterval: number | null = null;
@@ -18,12 +18,12 @@ export class ReverbClient {
 
   constructor(
     config: ReverbConfig,
-    onEvent: EventCallback,
+    onLog: LogCallback,
     onStatus: StatusCallback,
     onChannelsChange: ChannelCallback
   ) {
     this.config = config;
-    this.onEvent = onEvent;
+    this.onLog = onLog;
     this.onStatus = onStatus;
     this.onChannelsChange = onChannelsChange;
   }
@@ -38,6 +38,7 @@ export class ReverbClient {
     }
 
     this.isManuallyClosed = false;
+    this.emitLog('INFO', 'system', `Connecting to Reverb at ${this.config.host}:${this.config.port}...`);
     this.onStatus('CONNECTING', 'Connecting to Reverb...');
 
     try {
@@ -47,7 +48,7 @@ export class ReverbClient {
       this.ws = new WebSocket(url);
 
       this.ws.onopen = () => {
-        this.onStatus('CONNECTING', 'Handshaking protocol v7...');
+        this.emitLog('INFO', 'system', 'WebSocket connection opened, awaiting protocol handshake...');
       };
 
       this.ws.onmessage = (event) => {
@@ -56,19 +57,19 @@ export class ReverbClient {
 
       this.ws.onerror = (err) => {
         console.error('WebSocket Error:', err);
+        this.emitLog('ERROR', 'errors', `Connection failed to ${this.config.host}:${this.config.port}`);
         this.onStatus('ERROR', 'Connection failed or refused');
       };
 
       this.ws.onclose = (event) => {
         this.cleanup();
-        if (!this.isManuallyClosed) {
-          this.onStatus('DISCONNECTED', `Disconnected (code ${event.code})`);
-        } else {
-          this.onStatus('DISCONNECTED', 'Disconnected');
-        }
+        const reason = !this.isManuallyClosed ? `Disconnected (code ${event.code})` : 'Disconnected';
+        this.emitLog('INFO', 'system', `WebSocket connection closed (${reason})`);
+        this.onStatus('DISCONNECTED', reason);
       };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
+      this.emitLog('ERROR', 'errors', `Connection initialization error: ${msg}`);
       this.onStatus('ERROR', msg);
     }
   }
@@ -82,35 +83,73 @@ export class ReverbClient {
     this.onStatus('DISCONNECTED', 'Disconnected');
   }
 
-  public async subscribe(channelName: string): Promise<void> {
-    const trimmed = channelName.trim();
-    if (!trimmed) return;
+  public async subscribe(nameInput: string, type: ChannelType, eventName?: string): Promise<void> {
+    const rawName = nameInput.trim();
+    if (!rawName) return;
 
-    const isPrivate = trimmed.startsWith('private-');
-    const isPresence = trimmed.startsWith('presence-');
-    const type = isPresence ? 'presence' : isPrivate ? 'private' : 'public';
+    let wireName = rawName;
+    if (type === 'private' && !wireName.startsWith('private-')) {
+      wireName = `private-${wireName}`;
+    } else if (type === 'presence' && !wireName.startsWith('presence-')) {
+      wireName = `presence-${wireName}`;
+    }
+
+    const cleanName = rawName.replace(/^(private-|presence-)/, '');
 
     const sub: ChannelSubscription = {
-      name: trimmed,
+      name: cleanName,
+      wireName,
       type,
+      eventName: eventName && eventName.trim() ? eventName.trim() : undefined,
       status: 'subscribing',
       eventCount: 0
     };
 
-    this.channels.set(trimmed, sub);
+    this.channels.set(wireName, sub);
     this.emitChannels();
 
+    this.emitLog('INFO', 'system', `Connecting to ${type} channel: "${cleanName}"...`, cleanName);
+
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.socketId) {
-      return; // Will be subscribed once connected and socketId established
+      // Connect first if needed
+      if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
+        this.connect();
+      }
+      return;
     }
 
+    await this.dispatchSubscription(sub);
+  }
+
+  public unsubscribe(wireName: string): void {
+    const sub = this.channels.get(wireName);
+    if (sub) {
+      this.channels.delete(wireName);
+      this.emitChannels();
+
+      this.emitLog('INFO', 'system', `Unsubscribed from ${sub.type} channel: "${sub.name}"`, sub.name);
+
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.send({
+          event: 'pusher:unsubscribe',
+          data: { channel: wireName }
+        });
+      }
+    }
+  }
+
+  private async dispatchSubscription(sub: ChannelSubscription): Promise<void> {
     try {
-      if (isPrivate || isPresence) {
-        const authData = await AuthService.authorizeChannel(this.config, trimmed, this.socketId);
+      if (sub.type === 'private' || sub.type === 'presence') {
+        if (!this.socketId) {
+          throw new Error('Socket ID not available for authorization');
+        }
+
+        const authData = await AuthService.authorizeChannel(this.config, sub.wireName, this.socketId);
         this.send({
           event: 'pusher:subscribe',
           data: {
-            channel: trimmed,
+            channel: sub.wireName,
             auth: authData.auth,
             channel_data: authData.channel_data
           }
@@ -118,42 +157,15 @@ export class ReverbClient {
       } else {
         this.send({
           event: 'pusher:subscribe',
-          data: { channel: trimmed }
+          data: { channel: sub.wireName }
         });
       }
     } catch (err: unknown) {
       sub.status = 'error';
       this.emitChannels();
       const msg = err instanceof Error ? err.message : 'Auth error';
-      this.onStatus('ERROR', `Channel ${trimmed}: ${msg}`);
+      this.emitLog('ERROR', 'errors', `Subscription failed for ${sub.name}: ${msg}`, sub.name);
     }
-  }
-
-  public unsubscribe(channelName: string): void {
-    if (this.channels.has(channelName)) {
-      this.channels.delete(channelName);
-      this.emitChannels();
-
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        this.send({
-          event: 'pusher:unsubscribe',
-          data: { channel: channelName }
-        });
-      }
-    }
-  }
-
-  public triggerClientEvent(channel: string, eventName: string, data: unknown): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error('WebSocket is not connected');
-    }
-
-    const prefixedEvent = eventName.startsWith('client-') ? eventName : `client-${eventName}`;
-    this.send({
-      event: prefixedEvent,
-      channel,
-      data
-    });
   }
 
   private handleMessage(rawMessage: string): void {
@@ -165,6 +177,7 @@ export class ReverbClient {
       if (eventName === 'pusher:connection_established') {
         const connData = typeof packet.data === 'string' ? JSON.parse(packet.data) : packet.data;
         this.socketId = connData.socket_id;
+        this.emitLog('SUCCESS', 'system', `Handshake complete. Assigned Socket ID: ${this.socketId}`);
         this.onStatus('CONNECTED', `Connected (Socket ID: ${this.socketId})`);
         this.startHeartbeat();
         this.resubscribeAll();
@@ -179,22 +192,25 @@ export class ReverbClient {
 
       // Subscription Succeeded
       if (eventName === 'pusher_internal:subscription_succeeded') {
-        const channelName = packet.channel;
-        const sub = this.channels.get(channelName);
+        const wireName = packet.channel;
+        const sub = this.channels.get(wireName);
         if (sub) {
           sub.status = 'subscribed';
           this.emitChannels();
+          this.emitLog('SUCCESS', 'system', `Subscribed to ${sub.type} channel: "${sub.name}"`, sub.name);
         }
         return;
       }
 
       // Subscription Error
       if (eventName === 'pusher:subscription_error') {
-        const channelName = packet.channel;
-        const sub = this.channels.get(channelName);
+        const wireName = packet.channel;
+        const sub = this.channels.get(wireName);
         if (sub) {
           sub.status = 'error';
           this.emitChannels();
+          const errText = typeof packet.data === 'string' ? packet.data : JSON.stringify(packet.data);
+          this.emitLog('ERROR', 'errors', `Subscription error on "${sub.name}": ${errText}`, sub.name);
         }
         return;
       }
@@ -206,27 +222,38 @@ export class ReverbClient {
           try {
             parsedData = JSON.parse(parsedData);
           } catch {
-            // keep as string
+            // Keep as string
           }
         }
 
-        const channel = packet.channel || 'general';
-        const sub = this.channels.get(channel);
+        const wireName = packet.channel || '';
+        const sub = this.channels.get(wireName);
+
+        // Check if event name matches subscription filter (if specified)
+        if (sub && sub.eventName) {
+          const expected = sub.eventName.replace(/^\./, '');
+          const actualClean = eventName.replace(/^\./, '');
+          const matches = actualClean === expected || actualClean.endsWith(`\\${expected}`) || actualClean.endsWith(`.${expected}`);
+          if (!matches) {
+            // Skip event that does not match targeted event name
+            return;
+          }
+        }
+
         if (sub) {
           sub.eventCount++;
           this.emitChannels();
         }
 
-        const broadcastEvent: BroadcastEvent = {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }) + '.' + String(new Date().getMilliseconds()).padStart(3, '0'),
-          channel,
-          event: eventName,
-          data: parsedData,
-          raw: rawMessage
-        };
-
-        this.onEvent(broadcastEvent);
+        const channelLabel = sub ? sub.name : wireName;
+        this.emitLog(
+          'EVENT',
+          'events',
+          `Event: ${eventName} on "${channelLabel}"`,
+          channelLabel,
+          eventName,
+          parsedData
+        );
       }
     } catch (err) {
       console.warn('Failed to parse incoming WebSocket message:', err, rawMessage);
@@ -234,8 +261,8 @@ export class ReverbClient {
   }
 
   private resubscribeAll(): void {
-    for (const [name] of this.channels) {
-      this.subscribe(name);
+    for (const sub of this.channels.values()) {
+      this.dispatchSubscription(sub);
     }
   }
 
@@ -247,7 +274,6 @@ export class ReverbClient {
 
   private startHeartbeat(): void {
     this.stopHeartbeat();
-    // Reverb / Pusher expects ping roughly every 30 seconds
     this.pingInterval = window.setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         this.send({ event: 'pusher:ping', data: {} });
@@ -274,5 +300,26 @@ export class ReverbClient {
 
   private emitChannels(): void {
     this.onChannelsChange(Array.from(this.channels.values()));
+  }
+
+  private emitLog(
+    badge: ConsoleLogItem['badge'],
+    category: ConsoleLogItem['category'],
+    message: string,
+    channel?: string,
+    event?: string,
+    payload?: unknown
+  ): void {
+    const item: ConsoleLogItem = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+      badge,
+      category,
+      channel,
+      event,
+      message,
+      payload
+    };
+    this.onLog(item);
   }
 }
