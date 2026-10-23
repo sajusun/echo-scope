@@ -88,7 +88,7 @@ function readConfigFromDrawer(): ReverbConfig {
     host: cfgHost.value.trim() || '127.0.0.1',
     port: cfgPort.value.trim() || '8080',
     appKey: cfgKey.value.trim() || 'reverb-key',
-    authEndpoint: cfgAuth.value.trim() || 'http://robertcravatt.test/broadcasting/auth',
+    authEndpoint: cfgAuth.value.trim() || 'http://127.0.0.1:8000/broadcasting/auth',
     bearerToken: cfgToken.value.trim()
   };
 }
