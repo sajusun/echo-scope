@@ -44,6 +44,6 @@ export const DEFAULT_CONFIG: ReverbConfig = {
   port: '8080',
   appKey: '1dvx2vkq68nbt7ugr5q8',
   scheme: 'ws',
-  authEndpoint: 'http://robertcravatt.test/broadcasting/auth',
+  authEndpoint: 'http://127.0.0.1:8000/broadcasting/auth',
   bearerToken: ''
 };
