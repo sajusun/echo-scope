@@ -1,109 +1,37 @@
 import fs from 'fs';
 import path from 'path';
-import zlib from 'zlib';
+import { Resvg } from '@resvg/resvg-js';
 
-function createPng(width, height, drawPixel) {
-  const rowSize = width * 4;
-  const rawData = Buffer.alloc((rowSize + 1) * height);
+const svg = `
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+  </defs>
+  <!-- Sleek rounded squircle -->
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#greenGrad)" />
+  
+  <!-- Subtle top inner highlight for depth -->
+  <path d="M 34 8 L 94 8 C 112 8 120 16 120 34 L 120 40 C 120 22 112 12 94 12 L 34 12 C 16 12 8 22 8 40 L 8 34 C 8 16 16 8 34 8 Z" fill="#ffffff" opacity="0.18" />
 
-  for (let y = 0; y < height; y++) {
-    const rowOffset = y * (rowSize + 1);
-    rawData[rowOffset] = 0;
+  <!-- Centered Pulsing Echo Broadcast Signal -->
+  <circle cx="64" cy="64" r="9" fill="#ffffff" />
+  
+  <!-- Left Waves -->
+  <path d="M 50 48 C 42 53 38 58 38 64 C 38 70 42 75 50 80" 
+        fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+  <path d="M 36 36 C 24 44 18 53 18 64 C 18 75 24 84 36 92" 
+        fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
 
-    for (let x = 0; x < width; x++) {
-      const pixelOffset = rowOffset + 1 + x * 4;
-      const [r, g, b, a] = drawPixel(x, y, width, height);
-      rawData[pixelOffset] = r;
-      rawData[pixelOffset + 1] = g;
-      rawData[pixelOffset + 2] = b;
-      rawData[pixelOffset + 3] = a;
-    }
-  }
-
-  const deflated = zlib.deflateSync(rawData);
-  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width, 0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 6;
-  ihdr[10] = 0;
-  ihdr[11] = 0;
-  ihdr[12] = 0;
-
-  return Buffer.concat([
-    signature,
-    makeChunk('IHDR', ihdr),
-    makeChunk('IDAT', deflated),
-    makeChunk('IEND', Buffer.alloc(0))
-  ]);
-}
-
-function makeChunk(type, data) {
-  const length = Buffer.alloc(4);
-  length.writeUInt32BE(data.length, 0);
-
-  const typeBuffer = Buffer.from(type, 'ascii');
-  const typeAndData = Buffer.concat([typeBuffer, data]);
-
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(typeAndData), 0);
-
-  return Buffer.concat([length, typeAndData, crc]);
-}
-
-function crc32(buf) {
-  let crc = 0 ^ -1;
-  for (let i = 0; i < buf.length; i++) {
-    crc = (crc >>> 8) ^ crcTable[(crc ^ buf[i]) & 0xff];
-  }
-  return (crc ^ -1) >>> 0;
-}
-
-const crcTable = [];
-for (let n = 0; n < 256; n++) {
-  let c = n;
-  for (let k = 0; k < 8; k++) {
-    c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-  }
-  crcTable[n] = c;
-}
-
-function drawRadarPixel(x, y, w, h) {
-  const nx = x / (w - 1);
-  const ny = y / (h - 1);
-
-  // Rounded rectangle
-  const r = 0.22;
-  const dx = Math.max(0, Math.abs(nx - 0.5) - (0.5 - r));
-  const dy = Math.max(0, Math.abs(ny - 0.5) - (0.5 - r));
-  const dist = Math.sqrt(dx * dx + dy * dy);
-
-  if (dist > r) return [0, 0, 0, 0];
-
-  // Cyan #06b6d4 to Reverb Red #ff2d20 gradient background
-  const grad = nx * 0.4 + ny * 0.6;
-  const rBg = Math.round(6 + (255 - 6) * grad);
-  const gBg = Math.round(182 + (45 - 182) * grad);
-  const bBg = Math.round(212 + (32 - 212) * grad);
-
-  // Center circle and broadcast waves
-  const cx = 0.5;
-  const cy = 0.5;
-  const cDist = Math.sqrt((nx - cx) ** 2 + (ny - cy) ** 2);
-
-  // Center dot
-  if (cDist < 0.1) return [255, 255, 255, 255];
-
-  // Wave 1
-  if (cDist >= 0.22 && cDist <= 0.28) return [255, 255, 255, 240];
-
-  // Wave 2
-  if (cDist >= 0.36 && cDist <= 0.42) return [255, 255, 255, 200];
-
-  return [rBg, gBg, bBg, 255];
-}
+  <!-- Right Waves -->
+  <path d="M 78 48 C 86 53 90 58 90 64 C 90 70 86 75 78 80" 
+        fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+  <path d="M 92 36 C 104 44 110 53 110 64 C 110 75 104 84 92 92" 
+        fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" />
+</svg>
+`;
 
 const outDir = path.resolve('public/icons');
 if (!fs.existsSync(outDir)) {
@@ -111,8 +39,14 @@ if (!fs.existsSync(outDir)) {
 }
 
 for (const size of [16, 32, 48, 128]) {
-  const png = createPng(size, size, drawRadarPixel);
+  const resvg = new Resvg(svg, {
+    fitTo: {
+      mode: 'width',
+      value: size,
+    },
+  });
+  const pngBuffer = resvg.render().asPng();
   const filePath = path.join(outDir, `icon-${size}.png`);
-  fs.writeFileSync(filePath, png);
-  console.log(`Generated ${filePath}`);
+  fs.writeFileSync(filePath, pngBuffer);
+  console.log(`Generated high-res anti-aliased icon: ${filePath} (${size}x${size})`);
 }
