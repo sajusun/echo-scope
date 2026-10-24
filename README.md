@@ -197,7 +197,7 @@ Private channels require authorization via Laravel's `/broadcasting/auth` endpoi
    ```
 
 2. **In EchoScope:**
-   - In Settings (⚙️), ensure your **Auth URL** is set (e.g. `http://robertcravatt.test/broadcasting/auth`).
+   - In Settings (⚙️), ensure your **Auth URL** is set (e.g. `http://127.0.0.1:8000/broadcasting/auth` or `http://my-app.test/broadcasting/auth`).
    - If using API tokens, enter your **Bearer Token**.
    - If testing in the browser while logged into your Laravel app, session cookies are automatically forwarded!
    - **Channel Type:** Select `Private`
