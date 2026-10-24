@@ -36,4 +36,5 @@ Because EchoScope does not collect any data, no user data is ever sold, transfer
 ### 5. Open Source & Support
 EchoScope is open-source software licensed under the MIT License. If you have any inquiries, bug reports, or feedback regarding this policy, please reach out via GitHub:
 - **Repository:** [https://github.com/sajusun/echo-scope](https://github.com/sajusun/echo-scope)
-- **Developer:** Sakhawat Hossain
+- **Developer:** [Sakhawat Hossain](https://sajusun.github.io)
+- **Portfolio Website:** [https://sajusun.github.io](https://sajusun.github.io)
