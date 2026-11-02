@@ -1,3 +1,41 @@
-node_modules
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build Output & Packaged Archives
+dist/
+build/
+out/
+*.zip
+*.crx
+
+# Environment & Private Keys
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+
+# IDE & Editor Settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Operating System Files
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & Temporary Files
 *.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+*.tmp
+*.temp
+
+# Internal Store Submissions & Planning Docs
+store_assets/
+PLAN.md
