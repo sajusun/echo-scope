@@ -5,12 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/build.js --watch",
-    "build": "tsc --noEmit && node scripts/build.js",
+    "build": "tsc --noEmit && node scripts/build.js --target=chrome",
+    "build:firefox": "tsc --noEmit && node scripts/build.js --target=firefox",
+    "build:all": "tsc --noEmit && node scripts/build.js --target=all",
+    "package": "node scripts/package.js --target=chrome",
+    "package:firefox": "node scripts/package.js --target=firefox",
+    "package:all": "node scripts/package.js --target=all",
     "generate-icons": "node scripts/generate-icons.js",
     "mock-server": "node mock-server.js"
   },
   "keywords": [
     "chrome-extension",
+    "firefox-extension",
     "laravel-reverb",
     "websocket",
     "pusher",

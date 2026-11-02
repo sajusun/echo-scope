@@ -4,9 +4,11 @@ node_modules/
 
 # Build Output & Packaged Archives
 dist/
+dist-firefox/
 build/
 out/
 *.zip
+*.xpi
 *.crx
 
 # Environment & Private Keys
