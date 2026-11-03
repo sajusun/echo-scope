@@ -62,16 +62,23 @@ async function buildTarget(target) {
   const manifest = JSON.parse(manifestRaw);
 
   if (isFirefox) {
+    // Firefox AMO requires name <= 45 characters
+    if (manifest.name && manifest.name.length > 45) {
+      manifest.name = 'EchoScope - WebSocket & Reverb Inspector';
+    }
     // Firefox MV3 uses scripts array (Event Page) for maximum stability
     manifest.background = {
       scripts: ['background.js'],
       type: 'module'
     };
-    // Firefox AMO requires browser_specific_settings with unique gecko ID
+    // Firefox AMO requires browser_specific_settings with unique gecko ID and data consent
     manifest.browser_specific_settings = {
       gecko: {
         id: 'echoscope@sajusun.github.io',
-        strict_min_version: '109.0'
+        strict_min_version: '142.0',
+        data_collection_permissions: {
+          required: ['none']
+        }
       }
     };
   } else {
