@@ -12,6 +12,7 @@
     "package:firefox": "node scripts/package.js --target=firefox",
     "package:all": "node scripts/package.js --target=all",
     "generate-icons": "node scripts/generate-icons.js",
+    "generate-assets": "node scripts/generate-store-assets.js",
     "mock-server": "node mock-server.js"
   },
   "keywords": [
