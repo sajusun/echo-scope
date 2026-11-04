@@ -4,14 +4,15 @@
   "description": "Real-time WebSocket & Laravel Reverb Broadcast Inspector for Developers",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/build.js --watch",
-    "build": "tsc --noEmit && node scripts/build.js --target=chrome",
-    "build:firefox": "tsc --noEmit && node scripts/build.js --target=firefox",
-    "build:all": "tsc --noEmit && node scripts/build.js --target=all",
+    "dev": "node init && node scripts/build.js --watch",
+    "build": "node init && tsc --noEmit && node scripts/build.js --target=chrome",
+    "build:firefox": "node init && tsc --noEmit && node scripts/build.js --target=firefox",
+    "build:all": "node init && tsc --noEmit && node scripts/build.js --target=all",
     "package": "node scripts/package.js --target=chrome",
     "package:firefox": "node scripts/package.js --target=firefox",
     "package:all": "node scripts/package.js --target=all",
     "generate-icons": "node scripts/generate-icons.js",
+    "generate-assets": "node scripts/generate-store-assets.js",
     "mock-server": "node mock-server.js"
   },
   "keywords": [
@@ -30,6 +31,8 @@
     "@resvg/resvg-js": "^2.6.2",
     "@types/chrome": "^0.0.280",
     "@types/node": "^26.6.5",
+    "dotenv": "^8.2.0",
+    "node-fetch": "^3.3.2",
     "typescript": "^5.4.5",
     "vite": "^5.2.11",
     "ws": "^8.17.0"

@@ -12,15 +12,12 @@ out/
 *.crx
 
 # Environment & Private Keys
-.env
-.env.local
 .env.*.local
 *.pem
 *.key
 *.cert
 
 # IDE & Editor Settings
-.vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
@@ -41,3 +38,4 @@ yarn-debug.log*
 # Internal Store Submissions & Planning Docs
 store_assets/
 PLAN.md
+config.bat
