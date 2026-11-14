@@ -38,4 +38,5 @@ yarn-debug.log*
 # Internal Store Submissions & Planning Docs
 store_assets/
 PLAN.md
+
 config.bat
